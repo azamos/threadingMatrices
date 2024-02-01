@@ -53,6 +53,28 @@ void free_matrix(int** matrix,int rows){
     free(matrix);
 }
 
+int** multiply_matrices(int** A, int rowsA,int colsA, int** B, int rowsB, int colsB){
+    if(colsA!=rowsB){
+        printf("\nError, cannot mutiply matrices due to a dimenstions mismatch\n");
+        return NULL;
+    }
+    /*First, allocating space for result: dimensions are rowsA X colsB*/
+    int** AB = (int**)malloc(sizeof(int *)*rowsA);
+    for(int i = 0; i< rowsA; i++){
+        AB[i] = (int*)malloc(sizeof(int)*colsB);
+    }
+    for(int i = 0; i < rowsA; i++){
+        for(int j = 0; j< colsB;j++){
+            int sum = 0;
+            for(int k = 0; k< colsA; k++){
+                sum += A[i][k]*B[k][j];
+            }
+            AB[i][j] = sum;
+        }
+    }
+    return AB;
+}
+
 int main(int argc, char* argv[]){
     if(argc<3){
         printf("\nMissing source file for matrix 1 and source file for matrix 2");
@@ -85,8 +107,15 @@ int main(int argc, char* argv[]){
     }
     printf("\nmatrix1 and matrix 2 can be mutliplied!\n");
     /*First, I will do multiplication WITHOUT multi-threading, and time it*/
-    
+    int** AB = multiply_matrices(matrix1,rows1,cols1,matrix2,rows2,cols2);
+    for( int i = 0; i < rows1;i++){
+        printf("\n");
+        for(int j = 0; j < cols2; j++){
+            printf("%d,",AB[i][j]);
+        }
+    }
     free_matrix(matrix1,rows1);
     free_matrix(matrix2,rows2);
+    free_matrix(AB,rows1);
     return 0;
 }
