@@ -46,6 +46,13 @@ int** extract_matrix( const char* fileName,int* numRows, int* numCols){
     return matrix;
 }
 
+void free_matrix(int** matrix,int rows){
+    for(int i = 0; i< rows; i++){
+        free(matrix[i]);
+    }
+    free(matrix);
+}
+
 int main(int argc, char* argv[]){
     if(argc<3){
         printf("\nMissing source file for matrix 1 and source file for matrix 2");
@@ -70,12 +77,16 @@ int main(int argc, char* argv[]){
             printf("%d ",matrix2[i][k]);
         }
     }
-    for(int i = 0; i< rows1; i++){
-        free(matrix1[i]);
-        free(matrix2[i]);
+    if(cols1!=rows2){
+        printf("\nError, cannot mutiply matrices due to a dimenstions mismatch\n");
+        free_matrix(matrix1,rows1);
+        free_matrix(matrix2,rows2);
+        exit(-1);
     }
-    free(matrix1);
-    free(matrix2);
-
+    printf("\nmatrix1 and matrix 2 can be mutliplied!\n");
+    /*First, I will do multiplication WITHOUT multi-threading, and time it*/
+    
+    free_matrix(matrix1,rows1);
+    free_matrix(matrix2,rows2);
     return 0;
 }
