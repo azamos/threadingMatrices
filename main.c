@@ -127,7 +127,7 @@ int** modified_multiply(int** A, int rowsA, int colsA, int** BT, int rowsBT, int
     for(int i =0; i< rowsA; i++){
         for(int j =0; j<rowsBT;j++){
             int sum = 0;
-            for(int k = 0;k<colsBT;j++){
+            for(int k = 0;k<colsBT;k++){
                 sum+=A[i][k]*BT[j][k];
             }
             AB[i][j] = sum;
@@ -203,11 +203,24 @@ int main(int argc, char* argv[]){
     }
 
     /*Generated transpose from file. Now, to try modified matrix mult*/
-    //int** AB2 = modified_multiply(matrix1,rows1,cols1,BT,cols1,K);
+    int** AB2 = modified_multiply(matrix1,rows1,cols1,BT,K,cols1);
+    /*Checking correctness...*/
+    short correct = 1;
+    for(int i =0; i< rows1;i++){
+        for(int j =0; j<K; j++ ){
+            if(AB[i][j]!=AB2[i][j]){
+                correct = 0;
+                break;
+            }
+        }
+    }
+    printf("the modified algo is %s ", correct ? "corret":"wrong");
+
+
     free_matrix(matrix1,rows1);
     free_matrix(matrix2,rows2);
     free_matrix(AB,rows1);
     free_matrix(BT,cols1);
-    //free_matrix(AB2,cols1);
+    free_matrix(AB2,cols1);
     return 0;
 }
