@@ -116,6 +116,26 @@ int** multiply_matrices(int** A, int rowsA,int colsA, int** B, int rowsB, int co
     return AB;
 }
 
+int** modified_multiply(int** A, int rowsA, int colsA, int** BT, int rowsBT, int colsBT){
+    /*if A is MxN, and B is NxK(and BT is KxN), --> AB is MxK.
+    So, first I allocate M = rowsA rows.Then, for each row, I will allocate K = rowsBT columns*/
+    int** AB = (int**)malloc(sizeof(int *)*rowsA);
+    for(int i =0; i< rowsA; i++){
+        AB[i] = (int*)malloc(sizeof(int)*rowsBT);
+    }
+    /*Next, the modified multiplication*/
+    for(int i =0; i< rowsA; i++){
+        for(int j =0; j<rowsBT;j++){
+            int sum = 0;
+            for(int k = 0;k<colsBT;j++){
+                sum+=A[i][k]*BT[j][k];
+            }
+            AB[i][j] = sum;
+        }
+    }
+    return AB;
+}
+
 int get_threads_amount(){
     long num_cores = sysconf(_SC_NPROCESSORS_ONLN);
     if (num_cores < 1) {
@@ -171,22 +191,23 @@ int main(int argc, char* argv[]){
             printf("%d,",AB[i][j]);
         }
     }
-    free_matrix(matrix1,rows1);
-    free_matrix(matrix2,rows2);
-    free_matrix(AB,rows1);
     printf("\nCPU time used for singlethreaded matrix mul: %f nano seconds\n",cpu_time_used*BILLION);
     printf("\nNow, let's try to transpose and see if it improves time:\n");
     int K;
-    int** B_t = extract_transpose(argv[2],cols1,&K);
+    int** BT = extract_transpose(argv[2],cols1,&K);
     for(int i =0;i<K; i++){
         printf("\n");
         for(int j = 0; j<cols1;j++){
-            printf("%d ",B_t[i][j]);
+            printf("%d ",BT[i][j]);
         }
     }
-    for(int i =0;i<K; i++){
-        free(B_t[i]);
-    }
-    free(B_t);
+
+    /*Generated transpose from file. Now, to try modified matrix mult*/
+    //int** AB2 = modified_multiply(matrix1,rows1,cols1,BT,cols1,K);
+    free_matrix(matrix1,rows1);
+    free_matrix(matrix2,rows2);
+    free_matrix(AB,rows1);
+    free_matrix(BT,cols1);
+    //free_matrix(AB2,cols1);
     return 0;
 }
