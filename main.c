@@ -3,7 +3,47 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <pthread.h>
+#include <time.h>
 #define CHUNCK_SIZE 8
+#define BILLION 1000000000L
+
+int** extract_transpose( const char* fileName, int N, int*numCols){
+    /*Explanation about numRows: if matrix A dimensions are MxN, then matrix B's dimensions are NxK.
+    Meaning, this function assumes that matrix A and its dimensions were already extracted. All that is left to do here,
+    is to discover how many colums there are. Those will become the rows, and the numRows will serve as colums here*/
+    FILE* file = fopen(fileName,"r");
+    int num;
+    int row_counter = 0;
+    int a = 0;
+    int K = 0;
+    while(fscanf(file,"%d",&num)==1){
+        a++;
+        if(fgetc(file)=='\n'){
+            K = a;
+            break;
+        }
+    }
+    fclose(file);
+    /*Extracted K*/
+    *numCols = K;
+    int** transpose = (int**)malloc(sizeof(int*)*K);
+    for(int i =0; i<K;i++){
+        transpose[i] = (int*)malloc(sizeof(int)*N);
+    }
+
+    file = fopen(fileName,"r");
+    int i =0;
+    int j = 0;
+    while(fscanf(file,"%d",&num)==1){
+        transpose[j][i] = num;
+        if(fgetc(file)=='\n'){
+            j=0;//reseting the column index
+            i++;
+        }
+    }
+    fclose(file);
+    return transpose;
+}
 
 int** extract_matrix( const char* fileName,int* numRows, int* numCols){
     FILE* file = fopen(fileName,"r");
@@ -14,7 +54,8 @@ int** extract_matrix( const char* fileName,int* numRows, int* numCols){
     int j = 0;
     int COLS;
     short COLS_IS_SET = 0;
-    
+    /*this part is used to determine how many columns there are
+    It does this by going over the numbers of the first line*/
     int a = 0;
     while(fscanf(file,"%d",&num)==1){
         a++;
@@ -26,7 +67,7 @@ int** extract_matrix( const char* fileName,int* numRows, int* numCols){
     }
     matrix[0] = (int*)malloc(sizeof(int)*COLS);
     fclose(file);
-
+    /*here we scan the number from the file into the matrix*/
     file = fopen(fileName,"r");
     while(fscanf(file,"%d",&num)==1){
         matrix[row_counter][j++] = num;
@@ -75,6 +116,17 @@ int** multiply_matrices(int** A, int rowsA,int colsA, int** B, int rowsB, int co
     return AB;
 }
 
+int get_threads_amount(){
+    long num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+    if (num_cores < 1) {
+        fprintf(stderr, "Error retrieving the number of available cores.\n");
+        return 1;
+    }
+    printf("Number of available cores: %ld\n", num_cores);
+    return num_cores;
+}
+
+
 int main(int argc, char* argv[]){
     if(argc<3){
         printf("\nMissing source file for matrix 1 and source file for matrix 2");
@@ -107,7 +159,12 @@ int main(int argc, char* argv[]){
     }
     printf("\nmatrix1 and matrix 2 can be mutliplied!\n");
     /*First, I will do multiplication WITHOUT multi-threading, and time it*/
+    clock_t start,end;
+    double cpu_time_used;
+    start = clock();
     int** AB = multiply_matrices(matrix1,rows1,cols1,matrix2,rows2,cols2);
+    end = clock();
+    cpu_time_used = ((double)(end-start))/CLOCKS_PER_SEC;
     for( int i = 0; i < rows1;i++){
         printf("\n");
         for(int j = 0; j < cols2; j++){
@@ -117,5 +174,19 @@ int main(int argc, char* argv[]){
     free_matrix(matrix1,rows1);
     free_matrix(matrix2,rows2);
     free_matrix(AB,rows1);
+    printf("\nCPU time used for singlethreaded matrix mul: %f nano seconds\n",cpu_time_used*BILLION);
+    printf("\nNow, let's try to transpose and see if it improves time:\n");
+    int K;
+    int** B_t = extract_transpose(argv[2],cols1,&K);
+    for(int i =0;i<K; i++){
+        printf("\n");
+        for(int j = 0; j<cols1;j++){
+            printf("%d ",B_t[i][j]);
+        }
+    }
+    for(int i =0;i<K; i++){
+        free(B_t[i]);
+    }
+    free(B_t);
     return 0;
 }
