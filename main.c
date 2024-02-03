@@ -35,10 +35,10 @@ int** extract_transpose( const char* fileName, int N, int*numCols){
     int i =0;
     int j = 0;
     while(fscanf(file,"%d",&num)==1){
-        transpose[j][i] = num;
+        transpose[j++][i] = num;
         if(fgetc(file)=='\n'){
-            j=0;//reseting the column index
             i++;
+            j=0;
         }
     }
     fclose(file);
