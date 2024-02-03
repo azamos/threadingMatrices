@@ -7,6 +7,16 @@
 #define CHUNCK_SIZE 8
 #define BILLION 1000000000L
 
+typedef struct {
+    int** A;/*MxN*/
+    int** BT;/*KxN*/
+    int** AB;/*MxK*/
+    int N;
+    int K;
+    int start;
+    int end;
+} ThreadData;
+
 int** extract_transpose( const char* fileName, int N, int*numCols){
     /*Explanation about numRows: if matrix A dimensions are MxN, then matrix B's dimensions are NxK.
     Meaning, this function assumes that matrix A and its dimensions were already extracted. All that is left to do here,
@@ -154,6 +164,19 @@ int get_threads_amount(){
     return num_cores;
 }
 
+void* process_block(void* arg){
+    ThreadData* data = (ThreadData*)arg;
+    for(int i = data->start; i<data->end; i++){
+        for(int r2 = 0; r2 < data->K ; r2++){
+            int sum = 0;
+            for(int k = 0; k < data->N; k++){
+                sum+= data->A[i][k] * data->BT[r2][k];
+            }
+            data->AB[i][r2] = sum;
+        }   
+    }
+}
+
 
 int main(int argc, char* argv[]){
     if(argc<3){
@@ -219,11 +242,22 @@ int main(int argc, char* argv[]){
         printf("\nThe modified version was not faster\n");
     }
 
+    printf("\nNow to try a %d threaded matrix multiplication\n",get_threads_amount());
+    ThreadData* data = (ThreadData*)malloc(sizeof(ThreadData));
+    data->A=matrix1;
+    data->BT=BT;
+    data->AB = (int**)malloc(rows1*sizeof(int*));
+    data->N = cols1;
+    data->K = cols2;
+    data->start = 0;
+    data->end = cols2;
 
     free_matrix(matrix1,rows1);
     free_matrix(matrix2,rows2);
     free_matrix(AB,rows1);
     free_matrix(BT,cols1);
     free_matrix(AB2,cols1);
+
+    free(data);
     return 0;
 }
