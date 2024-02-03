@@ -93,6 +93,14 @@ void free_matrix(int** matrix,int rows){
     }
     free(matrix);
 }
+void print_matrix(int** matrix, int M, int N){
+    for(int i =0; i< M; i++){
+        printf("\n");
+        for(int j=0; j< N; j++){
+            printf("%d ",matrix[i][j]);
+        }
+    }
+}
 
 int** multiply_matrices(int** A, int rowsA,int colsA, int** B, int rowsB, int colsB){
     if(colsA!=rowsB){
@@ -152,25 +160,15 @@ int main(int argc, char* argv[]){
         printf("\nMissing source file for matrix 1 and source file for matrix 2");
         exit(-1);
     }
-    printf("\nmatrix1 file: %s,matrix2 file: %s",argv[1],argv[2]);
     int rows1,cols1,rows2,cols2;
     int** matrix1 = extract_matrix(argv[1],&rows1,&cols1);
     int** matrix2 = extract_matrix(argv[2],&rows2,&cols2);
     
     printf("\nmatrix1 has %d rows and %d cols\n",rows1,cols1);
-    for(int i = 0; i< rows1; i++){
-        printf("\n");
-        for(int k = 0; k< cols1; k++){
-            printf("%d ",matrix1[i][k]);
-        }
-    }
+    print_matrix(matrix1,rows1,cols1);
     printf("\nmatrix2 has %d rows and %d cols\n",rows2,cols2);
-    for(int i = 0; i< rows2 ;i++){
-        printf("\n");
-        for(int k = 0; k< cols2; k++){
-            printf("%d ",matrix2[i][k]);
-        }
-    }
+    print_matrix(matrix2,rows2,cols2);
+
     if(cols1!=rows2){
         printf("\nError, cannot mutiply matrices due to a dimenstions mismatch\n");
         free_matrix(matrix1,rows1);
@@ -184,14 +182,10 @@ int main(int argc, char* argv[]){
     start = clock();
     int** AB = multiply_matrices(matrix1,rows1,cols1,matrix2,rows2,cols2);
     end = clock();
-    cpu_time_used = ((double)(end-start))/CLOCKS_PER_SEC;
-    for( int i = 0; i < rows1;i++){
-        printf("\n");
-        for(int j = 0; j < cols2; j++){
-            printf("%d,",AB[i][j]);
-        }
-    }
-    printf("\nCPU time used for singlethreaded matrix mul: %f nano seconds\n",cpu_time_used*BILLION);
+    cpu_time_used = (((double)(end-start))/CLOCKS_PER_SEC);
+    print_matrix(AB,rows1,cols2);
+
+    printf("\nCPU time used for singlethreaded matrix mul: %f  seconds\n",cpu_time_used);
     printf("\nNow, let's try to transpose and see if it improves time:\n");
     int K;
     int** BT = extract_transpose(argv[2],cols1,&K);
@@ -203,7 +197,12 @@ int main(int argc, char* argv[]){
     }
 
     /*Generated transpose from file. Now, to try modified matrix mult*/
+    clock_t start2,end2;
+    double cpu_time_used2;
+    start2 = clock();
     int** AB2 = modified_multiply(matrix1,rows1,cols1,BT,K,cols1);
+    end2 = clock();
+    cpu_time_used2 = (((double)(end2-start2))/CLOCKS_PER_SEC);
     /*Checking correctness...*/
     short correct = 1;
     for(int i =0; i< rows1;i++){
@@ -215,6 +214,10 @@ int main(int argc, char* argv[]){
         }
     }
     printf("the modified algo is %s ", correct ? "corret":"wrong");
+    printf("\noriginal CPU time: %f  seconds,\n modified: %f  seconds\n",cpu_time_used,cpu_time_used2);
+    if(cpu_time_used < cpu_time_used2){
+        printf("\nThe modified version was not faster\n");
+    }
 
 
     free_matrix(matrix1,rows1);
