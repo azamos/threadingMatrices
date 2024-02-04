@@ -160,20 +160,20 @@ int get_threads_amount(){
         fprintf(stderr, "Error retrieving the number of available cores.\n");
         return 1;
     }
-    printf("Number of available cores: %ld\n", num_cores);
+    //printf("Number of available cores: %ld\n", num_cores);
     return num_cores;
 }
 
 void* process_block(void* arg){
-    printf("\nentered process_block...\n");
+    //printf("\nentered process_block...\n");
     ThreadData* data = (ThreadData*)arg;
     for(int i = data->start; i<data->end; i++){
         for(int j = 0; j < data->K ; j++){
             data->AB[i][j]= 0;
             for(int l = 0; l < data->N; l++){
-                printf("\nHERE %d \n",data->AB[i][j]);
+                // printf("\nHERE %d \n",data->AB[i][j]);
                 data->AB[i][j] += data->A[i][l]*(data->BT[j][l]);
-                printf(" %d",data->AB[i][j]);
+                // printf(" %d",data->AB[i][j]);
             }
             //printf("\nsum = %d\n",data->AB[i][j]);
         }
@@ -250,18 +250,23 @@ int main(int argc, char* argv[]){
     pthread_t* threads = (pthread_t*)malloc(cores*sizeof(pthread_t));
     
     int work_qouta = cols1 / cores;
+    printf("work qouta = %d  ",work_qouta);
     int remaining = cols1 % cores;
-    int block_start = 0;
     ThreadData** datas = (ThreadData**)malloc(cores*sizeof(ThreadData*));
     int** AB3 = (int**)malloc(rows1*sizeof(int*));
     for(int i =0; i <  rows1; i++){
         AB3[i] = (int*)malloc(cols2*sizeof(int));
     }
-
+    clock_t start3,end3;
+    double cpu_time_used3;
+    start3 = clock();
     for(int i =0; i < cores; i++){
-        int block_end = block_start + work_qouta + remaining > 0 ? 1 : 0;
-        if(remaining > 0){
-            remaining--;
+        int block_start = i*work_qouta;
+        // printf("start = %d  ",block_start);
+        int block_end = block_start + work_qouta;
+        // printf("block end  = %d  ",block_end);
+        if(i==cores-1){
+            block_end+=remaining;
         }
         ThreadData* data = (ThreadData*)malloc(sizeof(ThreadData));
         data->A=matrix1;
@@ -273,28 +278,31 @@ int main(int argc, char* argv[]){
         data->end = block_end;
         pthread_create(&threads[i],NULL,process_block,(void*)data);
         datas[i] = data;
-        block_start = block_end;
     }
 
 
     for (int i = 0; i < cores; i++) {
         pthread_join(threads[i], NULL);
     }
+    end3 = clock();
+    cpu_time_used3 = (((double)(end-start))/CLOCKS_PER_SEC);
 
 
     short wrong = 0;
     for(int i =0; i< rows1;i++){
-        printf("\n\n");
+        // printf("\n\n");
         for(int j =0; j<K; j++ ){
-            printf("AB[%d][%d] = %d, vs AB3[%d][%d] = %d",i,j,AB[i][j],i,j,AB3[i][j]);
-            printf("\n");
+            // printf("AB[%d][%d] = %d, vs AB3[%d][%d] = %d",i,j,AB[i][j],i,j,AB3[i][j]);
+            // printf("\n");
             if(AB[i][j]!=AB3[i][j]){
                 wrong = 1;
+                break;
             }
         }
     }
-    printf("the modified algo is %s ", wrong == 0? "corret":"wrong");
-    //print_matrix(AB3,rows1,cols2);
+    printf("the threaded algo is %s ", wrong == 0? "corret":"wrong");
+    printf("\n%d-threaded, modified matrix mul took %f seconds.\n",cores,cpu_time_used3);
+    printf("\nIN CONCLUSION: naive algo took %f,\nModified single thread took %f, and modified multi-thread took %f\n",cpu_time_used,cpu_time_used2,cpu_time_used3);
     
     free_matrix(matrix1,rows1);
     free_matrix(matrix2,rows2);

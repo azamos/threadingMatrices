@@ -111,6 +111,47 @@ void print_matrix(int** matrix, int M, int N){
         }
     }
 }
+int** multiply_matrices(int** A, int rowsA,int colsA, int** B, int rowsB, int colsB){
+    if(colsA!=rowsB){
+        printf("\nError, cannot mutiply matrices due to a dimenstions mismatch\n");
+        return NULL;
+    }
+    /*First, allocating space for result: dimensions are rowsA X colsB*/
+    int** AB = (int**)malloc(sizeof(int *)*rowsA);
+    for(int i = 0; i< rowsA; i++){
+        AB[i] = (int*)malloc(sizeof(int)*colsB);
+    }
+    for(int i = 0; i < rowsA; i++){
+        for(int j = 0; j< colsB;j++){
+            int sum = 0;
+            for(int k = 0; k< colsA; k++){
+                sum += A[i][k]*B[k][j];
+            }
+            AB[i][j] = sum;
+        }
+    }
+    return AB;
+}
+
+int** modified_multiply(int** A, int rowsA, int colsA, int** BT, int rowsBT, int colsBT){
+    /*if A is MxN, and B is NxK(and BT is KxN), --> AB is MxK.
+    So, first I allocate M = rowsA rows.Then, for each row, I will allocate K = rowsBT columns*/
+    int** AB = (int**)malloc(sizeof(int *)*rowsA);
+    for(int i =0; i< rowsA; i++){
+        AB[i] = (int*)malloc(sizeof(int)*rowsBT);
+    }
+    /*Next, the modified multiplication*/
+    for(int i =0; i< rowsA; i++){
+        for(int j =0; j<rowsBT;j++){
+            int sum = 0;
+            for(int k = 0;k<colsBT;k++){
+                sum+=A[i][k]*BT[j][k];
+            }
+            AB[i][j] = sum;
+        }
+    }
+    return AB;
+}
 
 
 int get_threads_amount(){
@@ -175,9 +216,9 @@ int main(int argc, char* argv[]){
 
     for(int i =0; i < cores; i++){
         int block_start = i*work_qouta;
-        printf("start = %d  ",block_start);
+        // printf("start = %d  ",block_start);
         int block_end = block_start + work_qouta;
-        printf("block end  = %d  ",block_end);
+        // printf("block end  = %d  ",block_end);
         if(i==cores-1){
             block_end+=remaining;
         }
