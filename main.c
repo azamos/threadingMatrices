@@ -167,13 +167,13 @@ int get_threads_amount(){
 void* process_block(void* arg){
     ThreadData* data = (ThreadData*)arg;
     for(int i = data->start; i<data->end; i++){
-        for(int r2 = 0; r2 < data->K ; r2++){
+        for(int j = 0; j < data->K ; j++){
             int sum = 0;
-            for(int k = 0; k < data->N; k++){
-                sum+= data->A[i][k] * data->BT[r2][k];
+            for(int l = 0; l < data->N; l++){
+                sum += data->A[i][l]*(data->BT[j][l]);
             }
-            data->AB[i][r2] = sum;
-        }   
+            data->AB[i][j] = sum;
+        }
     }
 }
 
@@ -250,12 +250,17 @@ int main(int argc, char* argv[]){
     int remaining = cols1 % cores;
     int block_start = 0;
     ThreadData** datas = (ThreadData**)malloc(cores*sizeof(ThreadData*));
+    int** AB3 = (int**)malloc(rows1*sizeof(int*));
+    for(int i =0; i <  rows1; i++){
+        AB3[i] = (int*)malloc(cols2*sizeof(int));
+    }
+
     for(int i =0; i < cores; i++){
         int block_end = block_start + work_qouta + remaining > 0 ? 1 : 0;
         ThreadData* data = (ThreadData*)malloc(sizeof(ThreadData));
         data->A=matrix1;
         data->BT=BT;
-        data->AB = (int**)malloc(rows1*sizeof(int*));
+        data->AB = AB3;
         data->N = cols1;
         data->K = cols2;
         data->start = block_start;
@@ -268,11 +273,24 @@ int main(int argc, char* argv[]){
     for(int i =0; i< cores; i++){
         pthread_join(threads[i],NULL);
     }
+
+    short wrong = 0;
+    for(int i =0; i< rows1;i++){
+        for(int j =0; j<K; j++ ){
+            if(AB[i][j]!=AB3[i][j]){
+                wrong = 1;
+                break;
+            }
+        }
+    }
+    printf("the modified algo is %s ", wrong == 0? "corret":"wrong");
+    
     free_matrix(matrix1,rows1);
     free_matrix(matrix2,rows2);
     free_matrix(AB,rows1);
     free_matrix(BT,cols1);
     free_matrix(AB2,cols1);
+    free_matrix(AB3,cols1);
 
     free(threads);
     for(int i = 0; i < cores; i++){
