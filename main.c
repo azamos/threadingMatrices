@@ -6,24 +6,67 @@
 #include <time.h>
 #include "matrix_operations.h"
 #define BILLION 1000000000L
+#define BIG_M 1500
+#define BIG_A_PATH "./big_A"
+#define BIG_B_PATH "./big_B"
 
+int file_exists(const char *filename) {
+    return access(filename, F_OK) != -1;
+}
+
+void generate_big_matrices(){
+    if (file_exists(BIG_A_PATH) && file_exists(BIG_B_PATH)) {
+        printf("\nFiles %s and %s already exist. Skipping generation.\n", BIG_A_PATH, BIG_B_PATH);
+        return;
+    }
+    srand(time(NULL));
+    FILE* file_A = fopen(BIG_A_PATH,"w");
+    FILE* file_B = fopen(BIG_B_PATH,"w");
+    for(int i = 0; i< BIG_M; i++){
+        for(int j = 0; j< BIG_M; j++){
+            fprintf(file_A,"%d",rand());
+            fprintf(file_B,"%d",rand());
+            if( j < BIG_M -1 ){
+                fprintf(file_A," ");
+                fprintf(file_B," ");
+            }
+        }
+        if(i<BIG_M-1){
+            fprintf(file_A,"\n");
+            fprintf(file_B,"\n");
+        }
+    }
+    fclose(file_A);
+    fclose(file_B);
+
+    printf("\nGenerated files %s and %s.\n", BIG_A_PATH, BIG_B_PATH);
+}
 
 int main(int argc, char* argv[]){
+    char* path1;
+    char* path2;
     if(argc<3){
-        printf("\nMissing source file for matrix 1 and source file for matrix 2");
-        exit(-1);
+        printf("\nMissing source file for matrix 1 and source file for matrix 2.\nWill generate 2 large matrix files instead...\n");
+        generate_big_matrices();
+        path1 = BIG_A_PATH;
+        path2 = BIG_B_PATH;
+    }
+    else{
+        path1 = argv[1];
+        path2 = argv[2];
     }
     int rows1,cols1,rows2,cols2;
-    int** matrix1 = extract_matrix(argv[1],&rows1,&cols1);
-    int** matrix2 = extract_matrix(argv[2],&rows2,&cols2);
+    int** matrix1 = extract_matrix(path1,&rows1,&cols1);
+    int** matrix2 = extract_matrix(path2,&rows2,&cols2);
     
-    //printf("\nmatrix1 has %d rows and %d cols\n",rows1,cols1);
-    //print_matrix(matrix1,rows1,cols1);
-    //printf("\nmatrix2 has %d rows and %d cols\n",rows2,cols2);
-    //print_matrix(matrix2,rows2,cols2);
+    // printf("\nmatrix1 has %d rows and %d cols\n",rows1,cols1);
+    // print_matrix(matrix1,rows1,cols1);
+    // printf("\nmatrix2 has %d rows and %d cols\n",rows2,cols2);
+    // print_matrix(matrix2,rows2,cols2);
 
     if(cols1!=rows2){
         printf("\nError, cannot mutiply matrices due to a dimenstions mismatch\n");
+        printf("cols1 = %d, rows2 = %d\n",cols1,rows2);
         free_matrix(matrix1,rows1);
         free_matrix(matrix2,rows2);
         exit(-1);
@@ -41,7 +84,7 @@ int main(int argc, char* argv[]){
     printf("\nCPU time used for singlethreaded matrix mul: %f  seconds\n",cpu_time_used);
     printf("\nNow, let's try to transpose and see if it improves time:\n");
     int K;
-    int** BT = extract_transpose(argv[2],cols1,&K);
+    int** BT = extract_transpose(path2,cols1,&K);
     // for(int i =0;i<K; i++){
     //     printf("\n");
     //     for(int j = 0; j<cols1;j++){
@@ -112,7 +155,7 @@ int main(int argc, char* argv[]){
         pthread_join(threads[i], NULL);
     }
     end3 = clock();
-    cpu_time_used3 = (((double)(end-start))/CLOCKS_PER_SEC);
+    cpu_time_used3 = (((double)(end3-start3))/CLOCKS_PER_SEC);
 
 
     short wrong = 0;
