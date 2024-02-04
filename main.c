@@ -165,14 +165,17 @@ int get_threads_amount(){
 }
 
 void* process_block(void* arg){
+    printf("\nentered process_block...\n");
     ThreadData* data = (ThreadData*)arg;
     for(int i = data->start; i<data->end; i++){
         for(int j = 0; j < data->K ; j++){
-            int sum = 0;
+            data->AB[i][j]= 0;
             for(int l = 0; l < data->N; l++){
-                sum += data->A[i][l]*(data->BT[j][l]);
+                printf("\nHERE %d \n",data->AB[i][j]);
+                data->AB[i][j] += data->A[i][l]*(data->BT[j][l]);
+                printf(" %d",data->AB[i][j]);
             }
-            data->AB[i][j] = sum;
+            //printf("\nsum = %d\n",data->AB[i][j]);
         }
     }
 }
@@ -187,10 +190,10 @@ int main(int argc, char* argv[]){
     int** matrix1 = extract_matrix(argv[1],&rows1,&cols1);
     int** matrix2 = extract_matrix(argv[2],&rows2,&cols2);
     
-    printf("\nmatrix1 has %d rows and %d cols\n",rows1,cols1);
-    print_matrix(matrix1,rows1,cols1);
-    printf("\nmatrix2 has %d rows and %d cols\n",rows2,cols2);
-    print_matrix(matrix2,rows2,cols2);
+    //printf("\nmatrix1 has %d rows and %d cols\n",rows1,cols1);
+    //print_matrix(matrix1,rows1,cols1);
+    //printf("\nmatrix2 has %d rows and %d cols\n",rows2,cols2);
+    //print_matrix(matrix2,rows2,cols2);
 
     if(cols1!=rows2){
         printf("\nError, cannot mutiply matrices due to a dimenstions mismatch\n");
@@ -198,7 +201,7 @@ int main(int argc, char* argv[]){
         free_matrix(matrix2,rows2);
         exit(-1);
     }
-    printf("\nmatrix1 and matrix 2 can be mutliplied!\n");
+    //printf("\nmatrix1 and matrix 2 can be mutliplied!\n");
     /*First, I will do multiplication WITHOUT multi-threading, and time it*/
     clock_t start,end;
     double cpu_time_used;
@@ -206,18 +209,18 @@ int main(int argc, char* argv[]){
     int** AB = multiply_matrices(matrix1,rows1,cols1,matrix2,rows2,cols2);
     end = clock();
     cpu_time_used = (((double)(end-start))/CLOCKS_PER_SEC);
-    print_matrix(AB,rows1,cols2);
+    //print_matrix(AB,rows1,cols2);
 
     printf("\nCPU time used for singlethreaded matrix mul: %f  seconds\n",cpu_time_used);
     printf("\nNow, let's try to transpose and see if it improves time:\n");
     int K;
     int** BT = extract_transpose(argv[2],cols1,&K);
-    for(int i =0;i<K; i++){
-        printf("\n");
-        for(int j = 0; j<cols1;j++){
-            printf("%d ",BT[i][j]);
-        }
-    }
+    // for(int i =0;i<K; i++){
+    //     printf("\n");
+    //     for(int j = 0; j<cols1;j++){
+    //         printf("%d ",BT[i][j]);
+    //     }
+    // }
 
     /*Generated transpose from file. Now, to try modified matrix mult*/
     clock_t start2,end2;
@@ -257,6 +260,9 @@ int main(int argc, char* argv[]){
 
     for(int i =0; i < cores; i++){
         int block_end = block_start + work_qouta + remaining > 0 ? 1 : 0;
+        if(remaining > 0){
+            remaining--;
+        }
         ThreadData* data = (ThreadData*)malloc(sizeof(ThreadData));
         data->A=matrix1;
         data->BT=BT;
@@ -265,25 +271,30 @@ int main(int argc, char* argv[]){
         data->K = cols2;
         data->start = block_start;
         data->end = block_end;
-        threads[i] = pthread_create(&threads[i],NULL,process_block,(void*)data);
+        pthread_create(&threads[i],NULL,process_block,(void*)data);
         datas[i] = data;
         block_start = block_end;
     }
 
-    for(int i =0; i< cores; i++){
-        pthread_join(threads[i],NULL);
+
+    for (int i = 0; i < cores; i++) {
+        pthread_join(threads[i], NULL);
     }
+
 
     short wrong = 0;
     for(int i =0; i< rows1;i++){
+        printf("\n\n");
         for(int j =0; j<K; j++ ){
+            printf("AB[%d][%d] = %d, vs AB3[%d][%d] = %d",i,j,AB[i][j],i,j,AB3[i][j]);
+            printf("\n");
             if(AB[i][j]!=AB3[i][j]){
                 wrong = 1;
-                break;
             }
         }
     }
     printf("the modified algo is %s ", wrong == 0? "corret":"wrong");
+    //print_matrix(AB3,rows1,cols2);
     
     free_matrix(matrix1,rows1);
     free_matrix(matrix2,rows2);
