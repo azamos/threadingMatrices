@@ -1,21 +1,10 @@
+#include "matrix_operations.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <pthread.h>
-#include <time.h>
-#define CHUNCK_SIZE 8
-#define BILLION 1000000000L
 
-typedef struct {
-    int** A;/*MxN*/
-    int** BT;/*KxN*/
-    int** AB;/*MxK*/
-    int N;
-    int K;
-    int start;
-    int end;
-} ThreadData;
 
 int** extract_transpose( const char* fileName, int N, int*numCols){
     /*Explanation about numRows: if matrix A dimensions are MxN, then matrix B's dimensions are NxK.
@@ -111,6 +100,7 @@ void print_matrix(int** matrix, int M, int N){
         }
     }
 }
+
 int** multiply_matrices(int** A, int rowsA,int colsA, int** B, int rowsB, int colsB){
     if(colsA!=rowsB){
         printf("\nError, cannot mutiply matrices due to a dimenstions mismatch\n");
@@ -153,20 +143,19 @@ int** modified_multiply(int** A, int rowsA, int colsA, int** BT, int rowsBT, int
     return AB;
 }
 
-
 int get_threads_amount(){
     long num_cores = sysconf(_SC_NPROCESSORS_ONLN);
     if (num_cores < 1) {
         fprintf(stderr, "Error retrieving the number of available cores.\n");
         return 1;
     }
-    printf("Number of available cores: %ld\n", num_cores);
+    //printf("Number of available cores: %ld\n", num_cores);
     return num_cores;
 }
 
 void* process_block(void* arg){
+    //printf("\nentered process_block...\n");
     ThreadData* data = (ThreadData*)arg;
-    printf("\nentered process_block... start = %d and end = %d\n",data->start,data->end);
     for(int i = data->start; i<data->end; i++){
         for(int j = 0; j < data->K ; j++){
             data->AB[i][j]= 0;
@@ -178,84 +167,4 @@ void* process_block(void* arg){
             //printf("\nsum = %d\n",data->AB[i][j]);
         }
     }
-}
-
-
-int main(int argc, char* argv[]){
-    if(argc<3){
-        printf("\nMissing source file for matrix 1 and source file for matrix 2");
-        exit(-1);
-    }
-    int rows1,cols1,rows2,cols2;
-    int** matrix1 = extract_matrix(argv[1],&rows1,&cols1);
-    int** matrix2 = extract_matrix(argv[2],&rows2,&cols2);
-
-    if(cols1!=rows2){
-        printf("\nError, cannot mutiply matrices due to a dimenstions mismatch\n");
-        free_matrix(matrix1,rows1);
-        free_matrix(matrix2,rows2);
-        exit(-1);
-    }
-    int K;
-    int** BT = extract_transpose(argv[2],cols1,&K);
-
-    /*Generated transpose from file. Now, to try modified matrix mult*/
-    int cores=get_threads_amount();
-    printf("\nNow to try a %d threaded matrix multiplication\n",cores);
-
-    pthread_t* threads = (pthread_t*)malloc(cores*sizeof(pthread_t));
-    
-    int work_qouta = cols1 / cores;
-    printf("work qouta = %d  ",work_qouta);
-    int remaining = cols1 % cores;
-    ThreadData** datas = (ThreadData**)malloc(cores*sizeof(ThreadData*));
-    int** AB3 = (int**)malloc(rows1*sizeof(int*));
-    for(int i =0; i <  rows1; i++){
-        AB3[i] = (int*)malloc(cols2*sizeof(int));
-    }
-
-    for(int i =0; i < cores; i++){
-        int block_start = i*work_qouta;
-        // printf("start = %d  ",block_start);
-        int block_end = block_start + work_qouta;
-        // printf("block end  = %d  ",block_end);
-        if(i==cores-1){
-            block_end+=remaining;
-        }
-        ThreadData* data = (ThreadData*)malloc(sizeof(ThreadData));
-        data->A=matrix1;
-        data->BT=BT;
-        data->AB = AB3;
-        data->N = cols1;
-        data->K = cols2;
-        data->start = block_start;
-        data->end = block_end;
-        pthread_create(&threads[i],NULL,process_block,(void*)data);
-        datas[i] = data;
-    }
-
-
-    for (int i = 0; i < cores; i++) {
-        pthread_join(threads[i], NULL);
-    }
-
-    for(int i =0; i< rows1;i++){
-        printf("\n\n");
-        for(int j =0; j<K; j++ ){
-            printf("AB3[%d][%d] = %d",i,j,AB3[i][j]);
-            printf("\n");
-        }
-    }
-    
-    free_matrix(matrix1,rows1);
-    free_matrix(matrix2,rows2);
-    free_matrix(BT,cols1);
-    free_matrix(AB3,cols1);
-
-    free(threads);
-    for(int i = 0; i < cores; i++){
-        free(datas[i]);
-    }
-    free(datas);
-    return 0;
 }
