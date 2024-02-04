@@ -241,23 +241,43 @@ int main(int argc, char* argv[]){
     if(cpu_time_used < cpu_time_used2){
         printf("\nThe modified version was not faster\n");
     }
+    int cores;
+    printf("\nNow to try a %d threaded matrix multiplication\n",cores=get_threads_amount());
 
-    printf("\nNow to try a %d threaded matrix multiplication\n",get_threads_amount());
-    ThreadData* data = (ThreadData*)malloc(sizeof(ThreadData));
-    data->A=matrix1;
-    data->BT=BT;
-    data->AB = (int**)malloc(rows1*sizeof(int*));
-    data->N = cols1;
-    data->K = cols2;
-    data->start = 0;
-    data->end = cols2;
+    pthread_t* threads = (pthread_t*)malloc(cores*sizeof(pthread_t));
+    
+    int work_qouta = cols1 / cores;
+    int remaining = cols1 % cores;
+    int block_start = 0;
+    ThreadData** datas = (ThreadData**)malloc(cores*sizeof(ThreadData*));
+    for(int i =0; i < cores; i++){
+        int block_end = block_start + work_qouta + remaining > 0 ? 1 : 0;
+        ThreadData* data = (ThreadData*)malloc(sizeof(ThreadData));
+        data->A=matrix1;
+        data->BT=BT;
+        data->AB = (int**)malloc(rows1*sizeof(int*));
+        data->N = cols1;
+        data->K = cols2;
+        data->start = block_start;
+        data->end = block_end;
+        threads[i] = pthread_create(&threads[i],NULL,process_block,(void*)data);
+        datas[i] = data;
+        block_start = block_end;
+    }
 
+    for(int i =0; i< cores; i++){
+        pthread_join(threads[i],NULL);
+    }
     free_matrix(matrix1,rows1);
     free_matrix(matrix2,rows2);
     free_matrix(AB,rows1);
     free_matrix(BT,cols1);
     free_matrix(AB2,cols1);
 
-    free(data);
+    free(threads);
+    for(int i = 0; i < cores; i++){
+        free(datas[i]);
+    }
+    free(datas);
     return 0;
 }
