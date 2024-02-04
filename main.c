@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 #include <pthread.h>
 #include <time.h>
+#include <sys/time.h>
 #include "matrix_operations.h"
 #define BILLION 1000000000L
 #define BIG_M 1500
@@ -127,9 +128,9 @@ int main(int argc, char* argv[]){
     for(int i =0; i <  rows1; i++){
         AB3[i] = (int*)malloc(cols2*sizeof(int));
     }
-    clock_t start3,end3;
+    struct timespec start3, end3;
     double cpu_time_used3;
-    start3 = clock();
+    clock_gettime(CLOCK_MONOTONIC, &start3);
     for(int i =0; i < cores; i++){
         int block_start = i*work_qouta;
         // printf("start = %d  ",block_start);
@@ -154,8 +155,8 @@ int main(int argc, char* argv[]){
     for (int i = 0; i < cores; i++) {
         pthread_join(threads[i], NULL);
     }
-    end3 = clock();
-    cpu_time_used3 = (((double)(end3-start3))/CLOCKS_PER_SEC);
+    clock_gettime(CLOCK_MONOTONIC, &end3);
+    cpu_time_used3 = (end3.tv_sec - start3.tv_sec) + (end3.tv_nsec - start3.tv_nsec) / BILLION;
 
 
     short wrong = 0;
